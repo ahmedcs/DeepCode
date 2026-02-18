@@ -43,7 +43,7 @@ async def get_llm_providers():
 
     # Get available providers (those with API keys configured)
     available_providers = []
-    for provider in ["google", "anthropic", "openai"]:
+    for provider in ["google", "anthropic", "openai", "mistral"]:
         if secrets.get(provider, {}).get("api_key"):
             available_providers.append(provider)
 

@@ -452,7 +452,7 @@ def _check_docker_prerequisites():
             print(f"      {secrets_file}")
             print("")
             print(
-                "   At least ONE LLM provider key is required (OpenAI/Anthropic/Google)."
+                "   At least ONE LLM provider key is required (OpenAI/Anthropic/Google/Mistral)."
             )
             print("   Then run 'deepcode' again.")
             sys.exit(0)

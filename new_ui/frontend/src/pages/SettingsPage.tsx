@@ -58,6 +58,10 @@ export default function SettingsPage() {
       name: 'OpenAI',
       description: 'Uses GPT models for code generation',
     },
+    mistral: {
+      name: 'Mistral',
+      description: 'Uses Mistral models for code generation',
+    },
   };
 
   if (isLoading) {

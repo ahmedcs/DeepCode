@@ -103,9 +103,9 @@ mcp:
       env:
         PYTHONPATH: .
 # LLM Provider Priority (选择使用哪个LLM / Choose which LLM to use)
-# Options: "anthropic", "google", "openai"
+# Options: "anthropic", "google", "openai", "mistral"
 # If not set or provider unavailable, will fallback to first available provider
-llm_provider: "openai"  # 设置为 "google", "anthropic", 或 "openai"
+llm_provider: "mistral" #"openai"  # 设置为 "google", "anthropic", "openai", 或 "mistral"
 
 #openrouter can be used here and openai professional key
 openai:
@@ -129,6 +129,11 @@ anthropic:
   default_model: "claude-sonnet-4.5"
   planning_model: "claude-sonnet-4.5"
   implementation_model: "claude-sonnet-3.5"
+
+mistral:
+  default_model: "mistral-small-latest"
+  planning_model: "mistral-small-latest"
+  implementation_model: "mistral-small-latest"
 
 
 planning_mode: traditional

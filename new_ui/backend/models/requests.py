@@ -45,7 +45,7 @@ class LLMProviderUpdateRequest(BaseModel):
     """Request model for updating LLM provider"""
 
     provider: str = Field(
-        ..., description="LLM provider name: google, anthropic, openai"
+        ..., description="LLM provider name: google, anthropic, openai, mistral"
     )
 
 

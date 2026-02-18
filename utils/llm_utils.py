@@ -21,12 +21,13 @@ def get_api_keys(secrets_path: str = "mcp_agent.secrets.yaml") -> Dict[str, str]
     - GOOGLE_API_KEY or GEMINI_API_KEY
     - ANTHROPIC_API_KEY
     - OPENAI_API_KEY
+    - MISTRAL_API_KEY
 
     Args:
         secrets_path: Path to the secrets YAML file
 
     Returns:
-        Dict with 'google', 'anthropic', 'openai' keys
+        Dict with 'google', 'anthropic', 'openai', 'mistral' keys
     """
     secrets = {}
     if os.path.exists(secrets_path):
@@ -51,6 +52,11 @@ def get_api_keys(secrets_path: str = "mcp_agent.secrets.yaml") -> Dict[str, str]
             or os.environ.get("OPENAI_API_KEY")
             or ""
         ).strip(),
+        "mistral": (
+            secrets.get("mistral", {}).get("api_key", "")
+            or os.environ.get("MISTRAL_API_KEY")
+            or ""
+        ).strip(),
     }
 
 
@@ -62,6 +68,7 @@ def load_api_config(secrets_path: str = "mcp_agent.secrets.yaml") -> Dict[str, A
     - GOOGLE_API_KEY or GEMINI_API_KEY
     - ANTHROPIC_API_KEY
     - OPENAI_API_KEY
+    - MISTRAL_API_KEY
 
     Args:
         secrets_path: Path to the secrets YAML file
@@ -98,6 +105,10 @@ def _get_llm_class(provider: str) -> Type[Any]:
         from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
         return OpenAIAugmentedLLM
+    elif provider == "mistral":
+        from utils.mistral_augmented_llm import MistralAugmentedLLM
+
+        return MistralAugmentedLLM
     elif provider == "google":
         from mcp_agent.workflows.llm.augmented_llm_google import GoogleAugmentedLLM
 
@@ -127,6 +138,7 @@ def get_preferred_llm_class(config_path: str = "mcp_agent.secrets.yaml") -> Type
         google_key = keys["google"]
         anthropic_key = keys["anthropic"]
         openai_key = keys["openai"]
+        mistral_key = keys["mistral"]
 
         # Read user preference from main config (derive path from secrets path)
         secrets_dir = os.path.dirname(os.path.abspath(config_path))
@@ -142,12 +154,17 @@ def get_preferred_llm_class(config_path: str = "mcp_agent.secrets.yaml") -> Type
             "anthropic": (anthropic_key, "AnthropicAugmentedLLM"),
             "google": (google_key, "GoogleAugmentedLLM"),
             "openai": (openai_key, "OpenAIAugmentedLLM"),
+            "mistral": (mistral_key, "OpenAIAugmentedLLM (Mistral-compatible)"),
         }
 
         # Try user's preferred provider first
         if preferred_provider and preferred_provider in provider_keys:
             api_key, class_name = provider_keys[preferred_provider]
             if api_key:
+                if preferred_provider == "mistral":
+                    # Reuse OpenAI-compatible client path for Mistral API.
+                    os.environ["OPENAI_API_KEY"] = api_key
+                    os.environ["OPENAI_BASE_URL"] = "https://api.mistral.ai/v1"
                 print(f"🤖 Using {class_name} (user preference: {preferred_provider})")
                 return _get_llm_class(preferred_provider)
             else:
@@ -158,6 +175,9 @@ def get_preferred_llm_class(config_path: str = "mcp_agent.secrets.yaml") -> Type
         # Fallback: try providers in order of availability
         for provider, (api_key, class_name) in provider_keys.items():
             if api_key:
+                if provider == "mistral":
+                    os.environ["OPENAI_API_KEY"] = api_key
+                    os.environ["OPENAI_BASE_URL"] = "https://api.mistral.ai/v1"
                 print(f"🤖 Using {class_name} ({provider} API key found)")
                 return _get_llm_class(provider)
 
@@ -219,8 +239,7 @@ def get_default_models(config_path: str = "mcp_agent.config.yaml"):
         config_path: Path to the configuration file
 
     Returns:
-        dict: Dictionary with 'anthropic', 'openai', 'google' default models,
-              plus 'google_planning' and 'google_implementation' for phase-specific models
+        dict: Dictionary with provider default models and phase-specific planning/implementation models
     """
     try:
         if os.path.exists(config_path):
@@ -231,12 +250,14 @@ def get_default_models(config_path: str = "mcp_agent.config.yaml"):
             anthropic_config = config.get("anthropic") or {}
             openai_config = config.get("openai") or {}
             google_config = config.get("google") or {}
+            mistral_config = config.get("mistral") or {}
 
             anthropic_model = anthropic_config.get(
                 "default_model", "claude-sonnet-4-20250514"
             )
             openai_model = openai_config.get("default_model", "o3-mini")
             google_model = google_config.get("default_model", "gemini-2.0-flash")
+            mistral_model = mistral_config.get("default_model", "mistral-small-latest")
 
             # Phase-specific models (fall back to default if not specified)
             # Google
@@ -254,17 +275,25 @@ def get_default_models(config_path: str = "mcp_agent.config.yaml"):
             openai_implementation = openai_config.get(
                 "implementation_model", openai_model
             )
+            # Mistral
+            mistral_planning = mistral_config.get("planning_model", mistral_model)
+            mistral_implementation = mistral_config.get(
+                "implementation_model", mistral_model
+            )
 
             return {
                 "anthropic": anthropic_model,
                 "openai": openai_model,
                 "google": google_model,
+                "mistral": mistral_model,
                 "google_planning": google_planning,
                 "google_implementation": google_implementation,
                 "anthropic_planning": anthropic_planning,
                 "anthropic_implementation": anthropic_implementation,
                 "openai_planning": openai_planning,
                 "openai_implementation": openai_implementation,
+                "mistral_planning": mistral_planning,
+                "mistral_implementation": mistral_implementation,
             }
         else:
             print(f"Config file {config_path} not found, using default models")
@@ -280,6 +309,7 @@ def _get_fallback_models():
     google = "gemini-2.0-flash"
     anthropic = "claude-sonnet-4-20250514"
     openai = "o3-mini"
+    mistral = "mistral-small-latest"
     return {
         "google": google,
         "google_planning": google,
@@ -290,6 +320,9 @@ def _get_fallback_models():
         "openai": openai,
         "openai_planning": openai,
         "openai_implementation": openai,
+        "mistral": mistral,
+        "mistral_planning": mistral,
+        "mistral_implementation": mistral,
     }
 
 

@@ -514,6 +514,7 @@ Requirements:
         anthropic_key = self.api_config.get("anthropic", {}).get("api_key", "")
         openai_key = self.api_config.get("openai", {}).get("api_key", "")
         google_key = self.api_config.get("google", {}).get("api_key", "")
+        mistral_key = self.api_config.get("mistral", {}).get("api_key", "")
 
         # Read user preference from main config
         preferred_provider = None
@@ -621,11 +622,47 @@ Requirements:
                 self.logger.warning(f"OpenAI API unavailable: {e}")
                 return None
 
+        async def init_mistral():
+            if not (mistral_key and mistral_key.strip()):
+                return None
+            try:
+                from openai import AsyncOpenAI
+
+                mistral_config = self.api_config.get("mistral", {})
+                base_url = mistral_config.get("base_url", "https://api.mistral.ai/v1")
+                client = AsyncOpenAI(api_key=mistral_key, base_url=base_url)
+
+                model_name = self.default_models.get("mistral", "mistral-small-latest")
+
+                try:
+                    await client.chat.completions.create(
+                        model=model_name,
+                        max_tokens=20,
+                        messages=[{"role": "user", "content": "test"}],
+                    )
+                except Exception as e:
+                    if "max_tokens" in str(e) and "max_completion_tokens" in str(e):
+                        await client.chat.completions.create(
+                            model=model_name,
+                            max_completion_tokens=20,
+                            messages=[{"role": "user", "content": "test"}],
+                        )
+                    else:
+                        raise
+
+                self.logger.info(f"Using Mistral API with model: {model_name}")
+                self.logger.info(f"Using Mistral base URL: {base_url}")
+                return client, "mistral"
+            except Exception as e:
+                self.logger.warning(f"Mistral API unavailable: {e}")
+                return None
+
         # Map providers to their init functions
         provider_init_map = {
             "anthropic": init_anthropic,
             "google": init_google,
             "openai": init_openai,
+            "mistral": init_mistral,
         }
 
         # Try preferred provider first
@@ -662,7 +699,11 @@ Requirements:
                 )
             elif client_type == "openai":
                 return await self._call_openai_with_tools(
-                    client, system_message, messages, tools, max_tokens
+                    client, system_message, messages, tools, max_tokens, "openai"
+                )
+            elif client_type == "mistral":
+                return await self._call_openai_with_tools(
+                    client, system_message, messages, tools, max_tokens, "mistral"
                 )
             elif client_type == "google":
                 return await self._call_google_with_tools(
@@ -998,9 +1039,9 @@ Requirements:
         return result
 
     async def _call_openai_with_tools(
-        self, client, system_message, messages, tools, max_tokens
+        self, client, system_message, messages, tools, max_tokens, provider="openai"
     ):
-        """Call OpenAI API with robust JSON error handling and retry mechanism"""
+        """Call OpenAI-compatible APIs with robust JSON error handling and retry mechanism"""
         openai_tools = []
         for tool in tools:
             openai_tools.append(
@@ -1023,7 +1064,7 @@ Requirements:
 
         # Use implementation-specific model for code generation
         impl_model = self.default_models.get(
-            "openai_implementation", self.default_models["openai"]
+            f"{provider}_implementation", self.default_models.get(provider, "o3-mini")
         )
         self.logger.info(f"🔧 Code generation using model: {impl_model}")
 

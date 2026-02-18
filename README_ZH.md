@@ -669,6 +669,10 @@ anthropic:
 
 google:
   api_key: "your_google_api_key"     # 用于 Gemini 模型
+
+mistral:
+  api_key: "your_mistral_api_key"    # 用于 Mistral 模型
+  base_url: "https://api.mistral.ai/v1"  # 可选: 自定义端点
 ```
 
 #### 🤖 LLM 提供商 *（可选）*
@@ -676,7 +680,7 @@ google:
 编辑 `mcp_agent.config.yaml` 选择你偏好的 LLM 提供商（第 ~106 行）：
 
 ```yaml
-# 选项: "google", "anthropic", "openai"
+# 选项: "google", "anthropic", "openai", "mistral"
 # 如果未设置或不可用，将自动回退到第一个可用的提供商
 llm_provider: "google"
 ```

@@ -672,6 +672,10 @@ anthropic:
 
 google:
   api_key: "your_google_api_key"     # For Gemini models
+
+mistral:
+  api_key: "your_mistral_api_key"    # For Mistral models
+  base_url: "https://api.mistral.ai/v1"  # Optional: custom endpoint
 ```
 
 #### 🤖 LLM Provider *(optional)*
@@ -679,7 +683,7 @@ google:
 Edit `mcp_agent.config.yaml` to choose your preferred LLM provider (line ~106):
 
 ```yaml
-# Options: "google", "anthropic", "openai"
+# Options: "google", "anthropic", "openai", "mistral"
 # If not set or unavailable, will automatically fallback to first available provider
 llm_provider: "google"
 ```
