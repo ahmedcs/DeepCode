@@ -20,6 +20,13 @@ echo ""
 setup_python_env() {
     # 优先级: 已激活的 conda > 已激活的 venv > 本地 .venv > 本地 venv > 自动激活 conda deepcode
 
+    # 尝试自动激活本地虚拟环境
+    if [ -d "$SCRIPT_DIR/venv" ]; then
+        echo -e "${YELLOW}⚡ 自动激活 .venv 环境${NC}"
+        source "$SCRIPT_DIR/venv/bin/activate"
+        return 0
+    fi
+
     if [ -n "$CONDA_PREFIX" ]; then
         echo -e "${GREEN}✓ 使用 conda 环境: $(basename $CONDA_PREFIX)${NC}"
         export PATH="$CONDA_PREFIX/bin:$PATH"
@@ -29,13 +36,6 @@ setup_python_env() {
     if [ -n "$VIRTUAL_ENV" ]; then
         echo -e "${GREEN}✓ 使用 virtualenv: $(basename $VIRTUAL_ENV)${NC}"
         export PATH="$VIRTUAL_ENV/bin:$PATH"
-        return 0
-    fi
-
-    # 尝试自动激活本地虚拟环境
-    if [ -d "$SCRIPT_DIR/.venv" ]; then
-        echo -e "${YELLOW}⚡ 自动激活 .venv 环境${NC}"
-        source "$SCRIPT_DIR/.venv/bin/activate"
         return 0
     fi
 

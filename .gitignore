@@ -71,6 +71,7 @@ memory-bank/
 
 # project files
 deepcode_lab/
+uploads/
 
 # secrets (use .env or environment variables instead)
 mcp_agent.secrets.yaml
